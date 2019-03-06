@@ -16,6 +16,8 @@ def run(opt):
     models.append(OpenCVSubtractor(OpenCVSubtractor.KNN))
   if opt.hgr_net:
     models.append(HGRNet())
+  if opt.hgr_net_dense:
+    models.append(HGRNet(dense=True))
   
   if len(models) == 0:
     models.append(ColorThreshold())
@@ -35,7 +37,9 @@ if __name__ == '__main__':
   parser.add_argument('--knn', action='store_true',
     help='OpenCV K-nearest neighbour subtractor (BackgroundSubtractorKNN)')
   parser.add_argument('--hgr-net', action='store_true',
-    help='HGR-Net model (CNN with ASPP) from https://arxiv.org/abs/1806.05653')
+    help='HGR-Net model (CNN with ASPP)')
+  parser.add_argument('--hgr-net-dense', action='store_true',
+    help='HGR-Net model (CNN with Dense ASPP)')
   opt = parser.parse_args()
   print('Options', opt)
   run(opt)

@@ -15,9 +15,13 @@ def img_get_square(img):
 
 
 class HGRNet:
-  def __init__(self):
+  def __init__(self, dense=False):
     self._opt = utils.AttrDict(size=(320, 320), shape=(320, 320, 3))
-    model_params_path = utils.abs_path('..', 'model_params', 'hgr_seg.hdf5')
+    self._dense = dense
+    model_suffix = '_dense' if self._dense else ''
+    model_params_fname = 'hgr_seg{}.hdf5'.format(model_suffix)
+    model_params_path = utils.abs_path('..', 'model_params', model_params_fname)
+    print('Model params path:', model_params_path)
     self._build_model()
     self._model.load_weights(model_params_path)
 
@@ -55,16 +59,16 @@ class HGRNet:
     classes = l.shape[-1].value
     dil_filters_in = classes // 2
     dil_filters_out = classes // 4
-    layers = [l]
+    ls = [l]
     for dilation in dilations:
-      if len(layers) == 1:
-        l_dil = layers[0]
+      if len(ls) == 1:
+        l_dil = ls[0]
       else:
-        l_dil = layers.Concatenate()(layers)
+        l_dil = layers.Concatenate()(ls)
       l_dil = self._conv_layer(l_dil, dil_filters_in, 1, batch_normalization=True)
       l_dil = self._conv_layer(l_dil, dil_filters_out, dil_kernel_size, dilation_rate=dilation)
-      layers.append(l_dil)
-    return layers.Concatenate()(layers)
+      ls.append(l_dil)
+    return layers.Concatenate()(ls)
 
   def _res_net(self, l, filters, strides=1):
     filters_first = filters // 4
@@ -93,7 +97,10 @@ class HGRNet:
     l = self._res_group(l, 128, 3, 2)
     l = self._bn_relu(l)
 
-    l = self._ASPP(l)
+    if self._dense:
+      l = self._dense_ASPP(l, [3, 6, 12, 18])
+    else:
+      l = self._ASPP(l)
 
     l = layers.Dropout(0.15)(l)
     l = layers.Conv2D(1, 1, activation='sigmoid')(l)
