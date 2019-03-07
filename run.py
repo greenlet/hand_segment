@@ -1,5 +1,4 @@
 import argparse
-import cv2
 from src import utils
 from src.model_color_threshold import ColorThreshold
 from src.model_opencv_subtractor import OpenCVSubtractor
@@ -7,24 +6,21 @@ from src.model_hgr_net import HGRNet
 
 
 def run(opt):
-  models = []
+  procs = []
   if opt.color_threshold:
-    models.append(ColorThreshold())
+    procs.append(ColorThreshold())
   if opt.gauss_mixture:
-    models.append(OpenCVSubtractor(OpenCVSubtractor.GAUSS_MIXTURE))
+    procs.append(OpenCVSubtractor(OpenCVSubtractor.GAUSS_MIXTURE))
   if opt.knn:
-    models.append(OpenCVSubtractor(OpenCVSubtractor.KNN))
+    procs.append(OpenCVSubtractor(OpenCVSubtractor.KNN))
   if opt.hgr_net:
-    models.append(HGRNet())
+    procs.append(HGRNet())
   if opt.hgr_net_dense:
-    models.append(HGRNet(dense=True))
-  
-  if len(models) == 0:
-    models.append(ColorThreshold())
+    procs.append(HGRNet(dense=True))
 
-  for img in utils.capture(0):
-    cv2.imshow('Source', img)
-    for model in models:
+  capturer = utils.Capturer()
+  for img in capturer.frames(0):
+    for model in procs:
       model.process(img)
 
 
@@ -42,6 +38,9 @@ if __name__ == '__main__':
     help='HGR-Net model (CNN with Dense ASPP)')
   opt = parser.parse_args()
   print('Options', opt)
+  print('Press Esc or q (Q) to exit')
+  print('Press f (F) to save frame')
+  print('Press r (R) to toggle recording')
   run(opt)
 
 
