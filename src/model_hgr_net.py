@@ -3,7 +3,11 @@ from keras.callbacks import ModelCheckpoint
 import cv2
 import numpy as np
 from src.bilinear import BilinearUpSampling2D
+from src.model_base import ModelBase
 from src import utils
+
+
+IMAGE_SIZE = 320
 
 
 def img_get_square(img):
@@ -14,11 +18,16 @@ def img_get_square(img):
     return img[h_offset:(h - h_offset), w_offset:(w - w_offset), :]
 
 
-class HGRNet:
-  def __init__(self, dense=False):
-    self._opt = utils.AttrDict(size=(320, 320), shape=(320, 320, 3))
-    self._dense = dense
-    model_suffix = '_dense' if self._dense else ''
+class HGRNet(ModelBase):
+  def __init__(self, dense=False, **opt):
+    model_suffix = '' if not dense else '_dense'
+    base_name = 'hgr_net' + model_suffix
+    base_opt = utils.AttrDict(name=base_name, **opt)
+    base_opt.width = IMAGE_SIZE*2
+    base_opt.height = IMAGE_SIZE
+    super().__init__(base_opt)
+    self._opt = utils.AttrDict(
+      size=(IMAGE_SIZE, IMAGE_SIZE), shape=(IMAGE_SIZE, IMAGE_SIZE, 3), dense=dense)
     model_params_fname = 'hgr_seg{}.hdf5'.format(model_suffix)
     model_params_path = utils.abs_path('..', 'model_params', model_params_fname)
     print('Model params path:', model_params_path)
@@ -97,7 +106,7 @@ class HGRNet:
     l = self._res_group(l, 128, 3, 2)
     l = self._bn_relu(l)
 
-    if self._dense:
+    if self._opt.dense:
       l = self._dense_ASPP(l, [3, 6, 12, 18])
     else:
       l = self._ASPP(l)
@@ -120,10 +129,10 @@ class HGRNet:
     img_out = img_out.astype(np.uint8)
     _, img_res = cv2.threshold(img_out, 127, 255, cv2.THRESH_OTSU)
     h, w, c = img_src.shape
-    img_show = np.zeros((h, 2*w, c), dtype=np.uint8)
-    img_res = np.expand_dims(img_res, -1)
-    img_show[:, :w] = img_src
+    img_show = np.zeros((h, 2*w), dtype=np.uint8)
+    img_show[:, :w] = img_out
     img_show[:, w:] = img_res
     cv2.imshow('HGR Net', img_show)
+    super()._post_process(img_show)
     return img_out
 

@@ -12,6 +12,9 @@ class AttrDict(dict):
   def __init__(self, *args, **kwargs):
     super(AttrDict, self).__init__(*args, **kwargs)
     self.__dict__ = self
+  
+  def __getattr__(self, name):
+    return self.__dict__.get(name)
 
 
 class FPS_Counter:
@@ -106,7 +109,7 @@ def save_frame(img):
     path = os.path.split(__file__)[0]
   else:
     path = ''
-  path = abs_path(path, '..', 'screens')
+  path = abs_path(path, '..', 'frames')
   make_dir(path)
   file_path = os.path.join(path, file_name)
   print('Saving screenshot to file', file_path)
@@ -114,30 +117,43 @@ def save_frame(img):
 
 
 class Capturer:
-  def __init__(self):
-    self._init()
+  def __init__(self, source=0):
     print('OpenCV {}'.format(cv2.__version__))
+    self._source = source
+    self._init()
 
   def _init(self):
+    print('Capturer source:', self._source)
+    self._cap = cv2.VideoCapture(self._source)
+    self._width = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    self._height = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    self._fps = self._cap.get(cv2.CAP_PROP_FPS)
+    print('OpenCV resolution: {:.0f}x{:.0f} {}'.format(self._width, self._height, self._fps))
     self._recording = False
-    self._cap = None
-    self._width = None
-    self._height = None
-    self._fps = None
     self._writer = None
 
-  def frames(self, cam_num=0):
-    self._cap = cv2.VideoCapture(cam_num)
-    self._width = self._cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    self._height = self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    self._width = int(self._width)
-    self._height = int(self._height)
-    self._fps = self._cap.get(cv2.CAP_PROP_FPS)
-    print('OpenCV capture resolution: {:.0f}x{:.0f} {}'.format(self._width, self._height, self._fps))
+  @property
+  def width(self):
+    return self._width
+
+  @property
+  def height(self):
+    return self._height
+
+  @property
+  def fps(self):
+    return self._fps
+
+  def frames(self):
     fpsc = FPS_Counter()
     while self._cap.isOpened():
       ret, img = self._cap.read()
-      img_src = cv2.flip(img, 1)
+      if img is None:
+        break
+      if type(self._source) == int:
+        img_src = cv2.flip(img, 1)
+      else:
+        img_src = img
       img_rec = self._rec(img_src)
       cv2.imshow('Source', img_rec)
       yield img_src
@@ -164,11 +180,12 @@ class Capturer:
   def _start_rec(self):
     if not self._recording:
       self._recording = True
-      fourcc = cv2.VideoWriter_fourcc(*'XVID')
-      video_dir = abs_path('..', 'recordings')
+      # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+      fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+      video_dir = abs_path('..', 'source_rec')
       make_dir(video_dir)
       dt_str = cur_datetime()
-      video_file_name = 'rec_{}_{:.0f}x{:.0f}_{:.0f}.avi'.format(dt_str, self._width, self._height, self._fps)
+      video_file_name = 'source_{}_{:.0f}x{:.0f}_{:.0f}.avi'.format(dt_str, self._width, self._height, self._fps)
       video_file_path = os.path.join(video_dir, video_file_name)
       self._writer = cv2.VideoWriter(video_file_path, fourcc, self._fps, (self._width, self._height))
       print('Recording started', video_file_path)

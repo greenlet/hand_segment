@@ -13,7 +13,7 @@ __pycache__/
 
 
 # Generated
-screens/
-recordings/
-
+frames/
+source_rec/
+model_rec/
 

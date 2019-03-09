@@ -1,4 +1,5 @@
 import argparse
+import os
 from src import utils
 from src.model_color_threshold import ColorThreshold
 from src.model_opencv_subtractor import OpenCVSubtractor
@@ -6,22 +7,41 @@ from src.model_hgr_net import HGRNet
 
 
 def run(opt):
+  model_opt = utils.AttrDict(save=opt.save)
+  source = opt.source
+  if source.isdigit():
+    source = int(source)
+  else:
+    file_name_base = os.path.split(source)[-1]
+    if file_name_base.startswith('source_') and len(file_name_base) > 7:
+      file_name_base = file_name_base[7:]
+      if len(file_name_base) > 0:
+        model_opt.video_file_name_base = file_name_base
+  capturer = utils.Capturer(source)
+
+  if opt.save:
+    model_opt.width = capturer.width
+    model_opt.height = capturer.height
+    model_opt.fps = int(capturer.fps)
+
   procs = []
   if opt.color_threshold:
-    procs.append(ColorThreshold())
+    procs.append(ColorThreshold(**model_opt))
   if opt.gauss_mixture:
-    procs.append(OpenCVSubtractor(OpenCVSubtractor.GAUSS_MIXTURE))
+    procs.append(OpenCVSubtractor(OpenCVSubtractor.GAUSS_MIXTURE, **model_opt))
   if opt.knn:
-    procs.append(OpenCVSubtractor(OpenCVSubtractor.KNN))
+    procs.append(OpenCVSubtractor(OpenCVSubtractor.KNN, **model_opt))
   if opt.hgr_net:
-    procs.append(HGRNet())
+    procs.append(HGRNet(dense=False, **model_opt))
   if opt.hgr_net_dense:
-    procs.append(HGRNet(dense=True))
+    procs.append(HGRNet(dense=True, **model_opt))
 
-  capturer = utils.Capturer()
-  for img in capturer.frames(0):
-    for model in procs:
-      model.process(img)
+  for img in capturer.frames():
+    for proc in procs:
+      proc.process(img)
+  
+  for proc in procs:
+    proc.release()
 
 
 if __name__ == '__main__':
@@ -36,11 +56,16 @@ if __name__ == '__main__':
     help='HGR-Net model (CNN with ASPP)')
   parser.add_argument('--hgr-net-dense', action='store_true',
     help='HGR-Net model (CNN with Dense ASPP)')
+  parser.add_argument('--source', type=str, default='0',
+    help='Path for input file. When set to number N webcam N is used: cv2.VideoCapture(N)')
+  parser.add_argument('--save', action='store_true',
+    help="Save each model's output to file")
+
   opt = parser.parse_args()
   print('Options', opt)
   print('Press Esc or q (Q) to exit')
   print('Press f (F) to save frame')
-  print('Press r (R) to toggle recording')
+  print('Press r (R) to toggle input recording')
   run(opt)
 
 
