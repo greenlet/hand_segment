@@ -8,7 +8,7 @@ class ModelBase:
     self._base_opt = opt
     if self._base_opt.save:
       self._init_save()
-  
+
   def _init_save(self):
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
     video_dir = utils.abs_path('..', 'model_rec')
