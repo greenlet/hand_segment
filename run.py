@@ -1,7 +1,7 @@
 import argparse
 import os
 from src import utils
-from src.model_color_threshold import ColorThreshold
+from src.model_color_mask import ColorMask
 from src.model_opencv_subtractor import OpenCVSubtractor
 from src.model_hgr_net import HGRNet
 
@@ -25,8 +25,10 @@ def run(opt):
     model_opt.fps = int(capturer.fps)
 
   procs = []
-  if opt.color_threshold:
-    procs.append(ColorThreshold(**model_opt))
+  if opt.color_mask_light:
+    procs.append(ColorMask(light=True, **model_opt))
+  if opt.color_mask_dark:
+    procs.append(ColorMask(light=False, **model_opt))
   if opt.gauss_mixture:
     procs.append(OpenCVSubtractor(OpenCVSubtractor.GAUSS_MIXTURE, **model_opt))
   if opt.knn:
@@ -46,8 +48,10 @@ def run(opt):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Hand segmentation models demo')
-  parser.add_argument('--color-threshold', action='store_true',
-    help='HLS color mask')
+  parser.add_argument('--color-mask-light', action='store_true',
+    help='HLS color mask with low Hue values')
+  parser.add_argument('--color-mask-dark', action='store_true',
+    help='HLS color mask with high Hue values')
   parser.add_argument('--gauss-mixture', action='store_true',
     help='OpenCV Gaussian Mixture-base subtractor (BackgroundSubtractorMOG2)')
   parser.add_argument('--knn', action='store_true',

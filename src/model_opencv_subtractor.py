@@ -25,7 +25,7 @@ class OpenCVSubtractor(ModelBase):
 
   def process(self, img):
     img_mask = self._bg_sub.apply(img)
-    img_blur = cv2.GaussianBlur(img_mask, OpenCVSubtractor.blur_size, 0)
+    img_blur = cv2.GaussianBlur(img_mask, self.blur_size, 0)
     _, img_res = cv2.threshold(img_blur, 127, 255, cv2.THRESH_OTSU)
     h, w = img_mask.shape
     shape = (h, 2 * w)
